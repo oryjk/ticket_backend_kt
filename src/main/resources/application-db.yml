@@ -1,0 +1,67 @@
+spring:
+  datasource:
+    url: jdbc:mysql://${mysql.host:www.oryjk.cn}:${mysql.port:3306}/${mysql.database:registration_system}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+    username: ${mysql.username:root}
+    password: ${mysql.password:beifa888}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      connection-test-query: SELECT 1
+      validation-timeout: 5000
+  main:
+    allow-bean-definition-overriding: true
+  jpa:
+    show-sql: true
+    database: mysql
+    database-platform: org.hibernate.dialect.MySQLDialect
+    generate-ddl: true
+
+  data:
+    redis:
+      host: www.oryjk.cn
+      port: 6379
+mybatis:
+  mapper-locations: classpath:mybatis/mapper/*.xml
+
+
+
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+  datasource:
+    url: jdbc:mysql://${mysql.host:localhost}:${mysql.port:3306}/${mysql.database:registration_system}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+    username: ${mysql.username:root}
+    password: ${mysql.password:beifa888}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  main:
+    allow-bean-definition-overriding: true
+  jpa:
+    show-sql: true
+    database: mysql
+    database-platform: org.hibernate.dialect.MySQLDialect
+    generate-ddl: true
+
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+mysql:
+  host: www.oryjk.cn
+  port: 3306
+  database: registration_system
+  username: root
+  password: beifa888
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+mysql:
+  host: www.oryjk.cn
+  port: 3316
+  database: registration_system
+  username: root
+  password: Bar888888

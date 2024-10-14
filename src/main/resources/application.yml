@@ -1,0 +1,49 @@
+spring:
+  profiles:
+    include: db
+    active: test
+  jmx:
+    enabled: true
+  jackson:
+    date-format: "yyyy-MM-dd HH:mm:ss.SSS"
+    time-zone: "GMT+8"
+
+  application:
+    name: registration
+
+management:
+  server:
+    port: 9098
+  endpoints:
+    web:
+      base-path: /man
+      exposure:
+        include:
+          - jolokia
+          - metrics
+
+  endpoint:
+    jolokia:
+      enabled: true
+    metrics:
+      enabled: true
+
+grpc:
+  server:
+    port: 9088
+
+server:
+  error:
+    include-message: always
+  port: 5689
+
+#grpc:
+#  server:
+#    port: 9099
+logging:
+  config: classpath:logback.xml
+#  level:
+#    org.springframework.web.client.RestTemplate: DEBUG
+
+
+
