@@ -70,7 +70,7 @@ object EncryptUtils {
         return result
     }
 
-    fun base64ToByteArray(base64: String): ByteArray {
+    private fun base64ToByteArray(base64: String): ByteArray {
         // 过滤掉非Base64字符
         val cleanedBase64 = base64.replace(Regex("[^A-Za-z0-9+/]"), "")
         val length = cleanedBase64.length
@@ -89,7 +89,7 @@ object EncryptUtils {
         return result
     }
 
-    fun encodeIVtoBytes(iv: String): ByteArray {
+    private fun encodeIVtoBytes(iv: String): ByteArray {
         val encodedURI = java.net.URLEncoder.encode(iv, "UTF-8")
         val byteArrayOutput = mutableListOf<Byte>()
 
@@ -109,7 +109,7 @@ object EncryptUtils {
         return byteArrayOutput.toByteArray()
     }
 
-    fun toByteArray(input: Any, isCopy: Boolean = false): ByteArray {
+    private fun toByteArray(input: Any, isCopy: Boolean = false): ByteArray {
         return when (input) {
             is ByteArray -> if (isCopy) input.copyOf() else input
             is Array<*> -> {
@@ -132,7 +132,7 @@ object EncryptUtils {
         }
     }
 
-    fun stringToUtf8ByteArray(input: String): ByteArray {
+    private fun stringToUtf8ByteArray(input: String): ByteArray {
         val byteArray = mutableListOf<Byte>()
 
         for (char in input) {
@@ -170,7 +170,7 @@ object EncryptUtils {
         return byteArray.toByteArray()
     }
 
-    fun padPkcs7(input: ByteArray, blockSize: Int = 16): ByteArray {
+    private fun padPkcs7(input: ByteArray, blockSize: Int = 16): ByteArray {
         val padding = blockSize - (input.size % blockSize)
         val paddedArray = ByteArray(input.size + padding)
 
@@ -185,7 +185,7 @@ object EncryptUtils {
         return paddedArray
     }
 
-    fun fromBytes(input: ByteArray): String {
+    private fun fromBytes(input: ByteArray): String {
         // 定义一个十六进制字符数组
         val hexChars = "0123456789ABCDEF".toCharArray()
         val result = StringBuilder()
