@@ -101,6 +101,10 @@ class OrderListener(
         return orderId
     }
 
+    fun getJobs(): Set<String> {
+        return jobMapping.keys
+    }
+
     fun createOrders() {
         val orderRequests = orderUseCase.getAutoBuyInfo()
         orderRequests.filter { !ObjectUtils.isEmpty(it.matchId) && !jobMapping.contains(it.orderId) }
