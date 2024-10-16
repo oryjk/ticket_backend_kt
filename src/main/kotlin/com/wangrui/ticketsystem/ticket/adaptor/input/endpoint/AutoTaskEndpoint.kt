@@ -8,7 +8,6 @@ import com.wangrui.ticketsystem.ticket.application.port.input.MatchUseCase
 import com.wangrui.ticketsystem.ticket.application.port.output.TicketDao
 import com.wangrui.ticketsystem.ticket.domain.*
 import com.wangrui.ticketsystem.ticket.domain.service.AutoTaskManager
-import jakarta.annotation.PostConstruct
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import org.springframework.util.StringUtils
@@ -21,13 +20,12 @@ class AutoTaskEndpoint(val autoTaskManager: AutoTaskManager,
                        val matchUseCase: MatchUseCase) {
 
     @Scheduled(cron = "0 0 14 * * ?")
-    @PostConstruct
     fun autoTask() {
         autoTaskManager.loopOrderRequest()
 //        autoTaskManager.watchLatestTicketInfo()
     }
 
-    @Scheduled(cron = "*/1 * * * * *")
+    @Scheduled(fixedRate = 5000) // 每5秒执行一次任务
     fun createOrder() {
         val matchId = matchUseCase.queryLatest().matchId
         val allTicket = ticketDao.queryAllTicket()
