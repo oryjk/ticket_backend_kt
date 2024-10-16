@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.wangrui.ticketsystem.extensions.slf4k
 import com.wangrui.ticketsystem.ticket.adaptor.output.OrderRequestEntity
+import com.wangrui.ticketsystem.ticket.application.port.input.MatchUseCase
 import com.wangrui.ticketsystem.ticket.application.port.input.OrderTaskUseCase
 import com.wangrui.ticketsystem.ticket.application.port.input.OrderUseCase
 import com.wangrui.ticketsystem.ticket.application.port.input.RequestUseCase
@@ -18,12 +19,11 @@ import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 
 @Service
-class OrderService(
-    val requestUseCase: RequestUseCase,
-    val orderRequestDao: OrderRequestDao,
-    val redisTemplate: RedisTemplate<String, Any>,
-    val objectMapper: ObjectMapper
-) : OrderUseCase {
+class OrderService(val requestUseCase: RequestUseCase,
+                   val orderRequestDao: OrderRequestDao,
+                   val redisTemplate: RedisTemplate<String, Any>,
+                   val objectMapper: ObjectMapper,
+                   val matchUseCase: MatchUseCase) : OrderUseCase {
 
     private val restTemplate = RestTemplate()
     private val orderRequestKey = "orderRequestKey"
@@ -53,11 +53,13 @@ class OrderService(
             objectMapper.convertValue(it, OrderTaskUseCase.OrderRequest::class.java)
         }
         if (orderRequests!!.isEmpty()) {
-            return orderRequestDao.getAutoBuyInfo().also {
-                it.forEach {
-                    redisTemplate.opsForSet().add(orderRequestKey, it)
+            val matchId = matchUseCase.queryLatest().matchId
+
+            return orderRequestDao.getAutoBuyInfo().filter { it.matchId == matchId }.also {
+                    it.filter { orderRequest -> orderRequest.matchId == matchId }.forEach {
+                        redisTemplate.opsForSet().add(orderRequestKey, it)
+                    }
                 }
-            }
         }
         return orderRequests
     }
@@ -70,4 +72,5 @@ class OrderService(
     override fun findByToken(token: String): List<OrderRequestEntity> {
         return orderRequestDao.findByToken(token)
     }
+
 }

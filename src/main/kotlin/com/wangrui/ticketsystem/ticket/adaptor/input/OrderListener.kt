@@ -1,9 +1,9 @@
 package com.wangrui.ticketsystem.ticket.adaptor.input
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.wangrui.ticketsystem.extensions.slf4k
 import com.wangrui.ticketsystem.ticket.adaptor.output.OrderRequestEntity
 import com.wangrui.ticketsystem.ticket.adaptor.output.OrderStatus
+import com.wangrui.ticketsystem.ticket.application.port.input.MatchUseCase
 import com.wangrui.ticketsystem.ticket.application.port.input.OrderTaskUseCase
 import com.wangrui.ticketsystem.ticket.application.port.input.OrderUseCase
 import com.wangrui.ticketsystem.ticket.application.port.output.UserDao
@@ -29,14 +29,12 @@ import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 
 @Service
-class OrderListener(
-    val orderUseCase: OrderUseCase,
-    val orderTaskUseCase: OrderTaskUseCase,
-    val redisTemplate: RedisTemplate<String, Any>,
-    @Value("\${autoCreateOrderWhenStartUp:false}") val autoCreateOrderWhenStartUp: Boolean,
-    @Value("\${jsonFilePath:E:\\抢票\\spider_img}") val jsonFilePath: String,
-    val objectMapper: ObjectMapper
-) {
+class OrderListener(val orderUseCase: OrderUseCase,
+                    val orderTaskUseCase: OrderTaskUseCase,
+                    val redisTemplate: RedisTemplate<String, Any>,
+                    val matchUseCase: MatchUseCase,
+                    @Value("\${autoCreateOrderWhenStartUp:false}") val autoCreateOrderWhenStartUp: Boolean,
+                    @Value("\${jsonFilePath:E:\\抢票\\spider_img}") val jsonFilePath: String) {
     private val logger = slf4k()
     private val srcPath = Paths.get(jsonFilePath) // 源文件夹路径
     private val INDEX_FILE = "index.json"
@@ -101,13 +99,18 @@ class OrderListener(
         return orderId
     }
 
-    fun getJobs(): Set<String> {
-        return jobMapping.keys
+    fun getJobs(): List<String> {
+        return jobMapping.keys.toList()
     }
 
     fun createOrders() {
+        val matchId = matchUseCase.queryLatest().matchId
         val orderRequests = orderUseCase.getAutoBuyInfo()
-        orderRequests.filter { !ObjectUtils.isEmpty(it.matchId) && !jobMapping.contains(it.orderId) }
+        if (orderRequests.isEmpty()) {
+            return
+        }
+
+        orderRequests.filter { !ObjectUtils.isEmpty(it.matchId) && !jobMapping.contains(it.orderId) && it.matchId == matchId }
             .forEach { orderRequest ->
                 if (OrderStatus.ONGOING.status == orderRequest.orderStatus) {
                     logger.info("创建任务，任务id ${orderRequest.orderId}，当前时间 ${LocalDate.now()}")

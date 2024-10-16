@@ -1,6 +1,5 @@
 package com.wangrui.ticketsystem.ticket.domain.service
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.wangrui.ticketsystem.ticket.adaptor.input.OrderListener
 import com.wangrui.ticketsystem.ticket.adaptor.output.OrderRequestEntity
 import com.wangrui.ticketsystem.ticket.adaptor.output.OrderStatus
@@ -20,7 +19,6 @@ import org.springframework.data.redis.core.RedisTemplate
 import org.springframework.stereotype.Service
 import org.springframework.util.StringUtils
 import java.time.LocalDateTime
-import java.util.concurrent.TimeUnit
 
 @Service
 class AutoTaskManager(val requestParamService: RequestParamService,
@@ -29,8 +27,7 @@ class AutoTaskManager(val requestParamService: RequestParamService,
                       @Value("\${autoCreateOrderWhenStartUp:false}") val autoCreateOrderWhenStartUp: Boolean,
                       val generalTicketService: GeneralTicketService,
                       val orderListener: OrderListener,
-                      val orderUseCase: OrderUseCase,
-                      val objectMapper: ObjectMapper) {
+                      val orderUseCase: OrderUseCase) {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val scope = CoroutineScope(Dispatchers.IO)
     private val timeDelay = 5000L
@@ -89,7 +86,7 @@ class AutoTaskManager(val requestParamService: RequestParamService,
         scope.launch {
             while (true) {
                 orderListener.createOrders()
-                TimeUnit.SECONDS.sleep(1)
+                delay(1000L)
             }
         }
 

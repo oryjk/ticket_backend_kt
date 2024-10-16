@@ -65,12 +65,11 @@ class OrderController(val orderUseCase: OrderUseCase,
             userInfoRepository.save(UserInfoEntity.toUserInfoEntity(userInfoRequest))
         }
 
-        autoTaskEndpoint.createOrder()
         return userInfoRequest.userId
     }
 
     @GetMapping("/getJobs")
-    fun getJobs(): Set<String> {
+    fun getJobs(): List<String> {
         return orderListener.getJobs()
     }
 
