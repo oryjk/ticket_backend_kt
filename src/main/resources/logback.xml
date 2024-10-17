@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
+    <!-- 关闭特定的 Hibernate 日志 -->
     <substitutionProperty name="log.pattern"
                           value="%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%5p) %clr(---){faint} %clr(%-80.80logger{79}){cyan} %clr(:){faint} %m%n%wEx"/>
 
@@ -16,21 +17,21 @@
         </encoder>
     </appender>
 
-<!--    &lt;!&ndash; File appender &ndash;&gt;-->
-<!--    <appender name="FILE" class="ch.qos.logback.core.FileAppender">-->
-<!--        <file>logs/RegistrationSystem.log</file>-->
-<!--        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">-->
-<!--            <fileNamePattern>logs/RegistrationSystem-%d{yyyy-MM-dd}.%i.log</fileNamePattern>-->
-<!--            <maxFileSize>10MB</maxFileSize>-->
-<!--            <maxHistory>7</maxHistory>-->
-<!--        </rollingPolicy>-->
-<!--        <encoder>-->
-<!--            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>-->
-<!--        </encoder>-->
-<!--    </appender>-->
+    <!--    &lt;!&ndash; File appender &ndash;&gt;-->
+    <!--    <appender name="FILE" class="ch.qos.logback.core.FileAppender">-->
+    <!--        <file>logs/RegistrationSystem.log</file>-->
+    <!--        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">-->
+    <!--            <fileNamePattern>logs/RegistrationSystem-%d{yyyy-MM-dd}.%i.log</fileNamePattern>-->
+    <!--            <maxFileSize>10MB</maxFileSize>-->
+    <!--            <maxHistory>7</maxHistory>-->
+    <!--        </rollingPolicy>-->
+    <!--        <encoder>-->
+    <!--            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>-->
+    <!--        </encoder>-->
+    <!--    </appender>-->
 
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
-<!--        <appender-ref ref="FILE"/>-->
+        <!--        <appender-ref ref="FILE"/>-->
     </root>
 </configuration>

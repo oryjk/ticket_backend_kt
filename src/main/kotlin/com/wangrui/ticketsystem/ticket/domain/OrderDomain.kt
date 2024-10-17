@@ -27,7 +27,7 @@ data class Region(
     val num: Int,
     val name: String,
     val price: String,
-    val usable_count: String
+    val usable_count: Int
 )
 
 

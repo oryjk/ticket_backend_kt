@@ -15,6 +15,7 @@ import com.wangrui.ticketsystem.utils.EmailSender
 import kotlinx.coroutines.*
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.annotation.Conditional
+import org.springframework.data.redis.core.RedisTemplate
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
 import java.time.LocalDateTime
@@ -28,7 +29,8 @@ class OrderTaskManager(ticketDao: TicketDao,
                        val orderUseCase: OrderUseCase,
                        val blockInfoDao: BlockInfoDao,
                        val userInfoRepository: UserInfoRepository,
-                       @Qualifier("objectMapper") private val objectMapper: ObjectMapper) : OrderTaskUseCase {
+                       @Qualifier("objectMapper") private val objectMapper: ObjectMapper,
+                       val redisTemplate: RedisTemplate<String, Any>) : OrderTaskUseCase {
     private val logger = slf4k()
     private val scope = CoroutineScope(Dispatchers.IO)
     private val allRegion = ticketDao.queryAllTicket()
@@ -54,6 +56,8 @@ class OrderTaskManager(ticketDao: TicketDao,
                     if (count == 10) {
                         count = 0
                     }
+                } catch (e: IllegalStateException) {
+                    throw e
                 } catch (e: Exception) {
                     logger.error(e.message)
                     delay(10000)
@@ -84,7 +88,10 @@ class OrderTaskManager(ticketDao: TicketDao,
                     "成都蓉城抢票失败token过期 ${orderRequest.users[0].realName}|${orderRequest.regions[0]}",
                     "名字 $nameStr, 区域 $regionStr，当前时间 ${LocalDateTime.now()}，${orderRequest.users[0].realName}|${orderRequest.regions[0]} 过期"
                 )
-                TimeUnit.SECONDS.sleep(300)
+                orderUseCase.deleteOrderById(orderRequest.orderId)
+                logger.info("当前任务token过期，删除当前任务")
+                redisTemplate.delete("orderRequestKey")
+                throw IllegalStateException("当前用户token已经过期，将当前任务置为无效，请及时更新token")
             }
 
             0 -> {

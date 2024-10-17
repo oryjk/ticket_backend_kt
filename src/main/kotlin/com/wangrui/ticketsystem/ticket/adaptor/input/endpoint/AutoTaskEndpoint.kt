@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.wangrui.ticketsystem.extensions.slf4k
 import com.wangrui.ticketsystem.ticket.adaptor.input.rest.OrderController
+import com.wangrui.ticketsystem.ticket.adaptor.output.UserInfoEntity
 import com.wangrui.ticketsystem.ticket.adaptor.output.UserInfoRepository
 import com.wangrui.ticketsystem.ticket.application.port.input.EncryptUtils
 import com.wangrui.ticketsystem.ticket.application.port.input.MatchUseCase
@@ -35,12 +36,10 @@ class AutoTaskEndpoint(val autoTaskManager: AutoTaskManager,
         val matchId = matchUseCase.queryLatest().matchId
         val allTicket = ticketDao.queryAllTicket()
 
-        return userInfoRepository.findAll().filter { user -> !StringUtils.isEmpty(user.users) }.map { user ->
+        return findValidUserInfo().filter { user -> !StringUtils.isEmpty(user.users) }.map { user ->
             var regions = user.regions.split(",")
             if (regions.size == 0 || StringUtils.isEmpty(user.regions)) {
-                val region1 = (503..535).map { it.toString() }
-                val region2 = (101..108).map { it.toString() }
-                regions = region1 + region2 + listOf("124")
+                regions = allTicket.values.sortedBy { it.price.toDouble() }.map { it.name }
             }
             val userOrders = regions.filter { allTicket.containsKey(it) }.flatMap { regionName ->
                 val region = allTicket[regionName]!!
@@ -67,7 +66,7 @@ class AutoTaskEndpoint(val autoTaskManager: AutoTaskManager,
         val userOrderMap = orderIds.map { it.split("|") } // 将每个字符串拆分为列表
             .groupBy({ it.first().toInt() }, { it.last() }) // 根据第一个元素分组，并将最后一个元素作为值的列表
 
-        return userInfoRepository.findAll().flatMap { user ->
+        return findValidUserInfo().flatMap { user ->
             objectMapper.readValue<List<UserInfo>>(user.members).filter {
                 userOrderMap.containsKey(it.id)
             }.flatMap { userInfo ->
@@ -115,5 +114,9 @@ class AutoTaskEndpoint(val autoTaskManager: AutoTaskManager,
                 }
             }
         }
+    }
+
+    fun findValidUserInfo(): List<UserInfoEntity> {
+        return userInfoRepository.findAll().filter { !it.expire }
     }
 }

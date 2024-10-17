@@ -15,7 +15,7 @@ class TicketInMemory : TicketDao {
         jacksonObjectMapper().readValue<GeneralTicketService.TicketResponse>(TicketInMemoryStoreHelper.responseJson).data.flatMap {
             it.list.map { item ->
                 Region(
-                    it.region, item.estate, 1, item.name, item.price, item.usable_count.toString()
+                    it.region, item.estate, 1, item.name, item.price, item.usable_count
                 )
             }
         }.associateBy { it.name }

@@ -26,6 +26,7 @@ data class UserInfoEntity(
     val version: Int = 0,
     val expireTime: Long = 0,
     val regions: String = "",
+    val expire:Boolean = false,
 ) {
     companion object {
         private val mapper = initMapper()
