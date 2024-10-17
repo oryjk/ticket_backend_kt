@@ -11,6 +11,7 @@ interface OrderUseCase {
     fun getAutoBuyInfo(): List<OrderTaskUseCase.OrderRequest>
     fun save(orderRequestEntity: OrderRequestEntity)
     fun findByToken(token: String): List<OrderRequestEntity>
+    fun deleteOrderById(orderId: String)
 
     data class MatchInfo(
         val id: Int,

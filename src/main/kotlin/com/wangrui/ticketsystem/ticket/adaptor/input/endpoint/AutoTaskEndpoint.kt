@@ -2,13 +2,15 @@ package com.wangrui.ticketsystem.ticket.adaptor.input.endpoint
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import com.wangrui.ticketsystem.extensions.slf4k
+import com.wangrui.ticketsystem.ticket.adaptor.input.rest.OrderController
 import com.wangrui.ticketsystem.ticket.adaptor.output.UserInfoRepository
 import com.wangrui.ticketsystem.ticket.application.port.input.EncryptUtils
 import com.wangrui.ticketsystem.ticket.application.port.input.MatchUseCase
 import com.wangrui.ticketsystem.ticket.application.port.output.TicketDao
 import com.wangrui.ticketsystem.ticket.domain.*
 import com.wangrui.ticketsystem.ticket.domain.service.AutoTaskManager
-import org.springframework.scheduling.annotation.Scheduled
+import jakarta.annotation.PostConstruct
 import org.springframework.stereotype.Service
 import org.springframework.util.StringUtils
 
@@ -19,28 +21,59 @@ class AutoTaskEndpoint(val autoTaskManager: AutoTaskManager,
                        val objectMapper: ObjectMapper,
                        val matchUseCase: MatchUseCase) {
 
-    @Scheduled(cron = "0 0 14 * * ?")
+
+    private val logger = slf4k()
+
+
+    @PostConstruct
     fun autoTask() {
         autoTaskManager.loopOrderRequest()
 //        autoTaskManager.watchLatestTicketInfo()
     }
 
-    @Scheduled(fixedRate = 5000) // 每5秒执行一次任务
-    fun createOrder() {
+    fun getUserCandidateOrders(): Map<String, List<OrderController.OrderInfoResult>> {
         val matchId = matchUseCase.queryLatest().matchId
         val allTicket = ticketDao.queryAllTicket()
-        userInfoRepository.findAll().filter { user -> !StringUtils.isEmpty(user.users) }.forEach { user ->
+
+        return userInfoRepository.findAll().filter { user -> !StringUtils.isEmpty(user.users) }.map { user ->
             var regions = user.regions.split(",")
             if (regions.size == 0 || StringUtils.isEmpty(user.regions)) {
                 val region1 = (503..535).map { it.toString() }
                 val region2 = (101..108).map { it.toString() }
                 regions = region1 + region2 + listOf("124")
             }
-            regions.filter { allTicket.containsKey(it) }.forEach { regionName ->
+            val userOrders = regions.filter { allTicket.containsKey(it) }.flatMap { regionName ->
                 val region = allTicket[regionName]!!
-                user.users.split(",").filter { userId -> !StringUtils.isEmpty(userId) }.forEach { userId ->
-                    val userInfos = objectMapper.readValue<List<UserInfo>>(user.members).associateBy { it.id }
-                    val userInfo = userInfos[userId.toInt()]!!
+                val orderInfoResults =
+                    user.users.split(",").filter { userId -> !StringUtils.isEmpty(userId) }.map { userId ->
+                        val userInfos = objectMapper.readValue<List<UserInfo>>(user.members).associateBy { it.id }
+                        val userInfo = userInfos[userId.toInt()]!!
+                        OrderController.OrderInfoResult(
+                            "${userInfo.id}|$matchId|${region.name}", userInfo.id, userInfo.realname
+                        )
+
+                    }
+                orderInfoResults
+            }
+            user.userId to userOrders
+        }.toMap()
+    }
+
+
+    fun createOrder(orderIds: List<String>): List<String> {
+        logger.info("每隔5秒扫描一下订单")
+        val matchId = matchUseCase.queryLatest().matchId
+        val allTicket = ticketDao.queryAllTicket()
+        val userOrderMap = orderIds.map { it.split("|") } // 将每个字符串拆分为列表
+            .groupBy({ it.first().toInt() }, { it.last() }) // 根据第一个元素分组，并将最后一个元素作为值的列表
+
+        return userInfoRepository.findAll().flatMap { user ->
+            objectMapper.readValue<List<UserInfo>>(user.members).filter {
+                userOrderMap.containsKey(it.id)
+            }.flatMap { userInfo ->
+                val regions = userOrderMap[userInfo.id]!!
+                regions.filter { allTicket.containsKey(it) }.map { regionName ->
+                    val region = allTicket[regionName]!!
                     val formData = FormData(
                         true, matchId, listOf(
                             OrderRegion(
@@ -71,18 +104,16 @@ class AutoTaskEndpoint(val autoTaskManager: AutoTaskManager,
                     )
 
                     val orderPayloadRoot = OrderPayloadRoot.convertFormData2Object(
-                        EncryptUtils.EncryptionParams(user.encryptKey, user.iv, user.version, user.expireTime), formData
+                        EncryptUtils.EncryptionParams(
+                            user.encryptKey, user.iv, user.version, user.expireTime
+                        ), formData
                     )
                     autoTaskManager.createOrder(
                         "${user.userId}|$matchId|${region.name}", user.loginCode, user.token, orderPayloadRoot
                     )
+
                 }
-
-
             }
-
-
         }
-
     }
 }

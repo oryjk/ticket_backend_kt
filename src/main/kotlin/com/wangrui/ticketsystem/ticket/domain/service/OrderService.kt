@@ -56,10 +56,10 @@ class OrderService(val requestUseCase: RequestUseCase,
             val matchId = matchUseCase.queryLatest().matchId
 
             return orderRequestDao.getAutoBuyInfo().filter { it.matchId == matchId }.also {
-                    it.filter { orderRequest -> orderRequest.matchId == matchId }.forEach {
-                        redisTemplate.opsForSet().add(orderRequestKey, it)
-                    }
+                it.filter { orderRequest -> orderRequest.matchId == matchId }.forEach {
+                    redisTemplate.opsForSet().add(orderRequestKey, it)
                 }
+            }
         }
         return orderRequests
     }
@@ -71,6 +71,11 @@ class OrderService(val requestUseCase: RequestUseCase,
 
     override fun findByToken(token: String): List<OrderRequestEntity> {
         return orderRequestDao.findByToken(token)
+    }
+
+    override fun deleteOrderById(orderId: String) {
+        orderRequestDao.deleteByOrderId(orderId)
+        redisTemplate.delete(orderRequestKey)
     }
 
 }

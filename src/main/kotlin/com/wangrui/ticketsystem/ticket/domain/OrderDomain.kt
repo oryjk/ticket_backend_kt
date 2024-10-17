@@ -1,5 +1,7 @@
 package com.wangrui.ticketsystem.ticket.domain
 
+import org.apache.logging.log4j.util.StringMap
+
 
 data class CreateOrderParam(
     val queryParam: CreateOrderQueryParam,
@@ -52,14 +54,17 @@ data class User(
             signature: String,
             realName: String,
             realCardId2: String,
-            phone2: String
+            phone2: String,
+            realCardId: String,
+            phone: String,
+            showText: String
         ): User {
             return User(
                 id,
                 uid,
                 realName,
-                "cccccc",
-                "ddddd",
+                realCardId,
+                phone,
                 id == uid,
                 realCardId2,
                 phone2,
@@ -67,7 +72,7 @@ data class User(
                 signature,
                 false,
                 false,
-                "ffff"
+                showText
             )
         }
     }

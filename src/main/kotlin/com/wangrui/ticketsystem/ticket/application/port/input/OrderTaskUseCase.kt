@@ -19,7 +19,8 @@ interface OrderTaskUseCase {
         val token: String,//最后一次登录的时间戳，参与生成encryptedData
         val matchId: String,//比赛的id
         val clientTokenId: String,
-        val orderStatus: Int
+        val orderStatus: Int,
+        val uid: Int = 0
     )
 
     data class UserOrderInfo(

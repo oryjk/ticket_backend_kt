@@ -9,6 +9,6 @@ import com.wangrui.ticketsystem.ticket.application.port.input.OrderTaskUseCase
 interface OrderRequestDao {
     fun getAutoBuyInfo(): List<OrderTaskUseCase.OrderRequest>
     fun save(orderRequestEntity: OrderRequestEntity)
-
+    fun deleteByOrderId(orderId: String)
     fun findByToken(token: String): List<OrderRequestEntity>
 }

@@ -10,6 +10,8 @@ spring:
 
   application:
     name: registration
+  jpa:
+    show-sql: false
 
 management:
   server:

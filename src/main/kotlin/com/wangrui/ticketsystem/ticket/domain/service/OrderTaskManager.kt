@@ -1,6 +1,9 @@
 package com.wangrui.ticketsystem.ticket.domain.service
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import com.wangrui.ticketsystem.extensions.slf4k
+import com.wangrui.ticketsystem.ticket.adaptor.output.UserInfoRepository
 import com.wangrui.ticketsystem.ticket.application.port.input.EncryptUtils
 import com.wangrui.ticketsystem.ticket.application.port.input.GeneralTicketUseCase
 import com.wangrui.ticketsystem.ticket.application.port.input.OrderTaskUseCase
@@ -10,6 +13,7 @@ import com.wangrui.ticketsystem.ticket.application.port.output.TicketDao
 import com.wangrui.ticketsystem.ticket.domain.*
 import com.wangrui.ticketsystem.utils.EmailSender
 import kotlinx.coroutines.*
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.context.annotation.Conditional
 import org.springframework.stereotype.Service
 import org.springframework.web.client.RestTemplate
@@ -20,9 +24,11 @@ import java.util.regex.Pattern
 
 @Service
 @Conditional(OrderTaskUseCaseCondition::class)
-class OrderTaskManager(
-    ticketDao: TicketDao, val orderUseCase: OrderUseCase, val blockInfoDao: BlockInfoDao
-) : OrderTaskUseCase {
+class OrderTaskManager(ticketDao: TicketDao,
+                       val orderUseCase: OrderUseCase,
+                       val blockInfoDao: BlockInfoDao,
+                       val userInfoRepository: UserInfoRepository,
+                       @Qualifier("objectMapper") private val objectMapper: ObjectMapper) : OrderTaskUseCase {
     private val logger = slf4k()
     private val scope = CoroutineScope(Dispatchers.IO)
     private val allRegion = ticketDao.queryAllTicket()
@@ -58,9 +64,9 @@ class OrderTaskManager(
 
     }
 
-    private fun logInConsole(
-        orderRequest: OrderTaskUseCase.OrderRequest, result: CreateMatchOrderResponse, count: Int
-    ) {
+    private fun logInConsole(orderRequest: OrderTaskUseCase.OrderRequest,
+                             result: CreateMatchOrderResponse,
+                             count: Int) {
         var regions = regions(orderRequest)
         val nameStr = orderRequest.users.map { it.realName }.reduce { acc, i -> "$acc , $i" }
         val regionStr = regions.map { it.name }.reduce { acc, i -> "$acc , $i" }
@@ -178,6 +184,9 @@ class OrderTaskManager(
         val createOrderQueryParam = CreateOrderQueryParam(uId, epochSecond, sign, orderRequest.token)
         var regions = regions(orderRequest)
 
+        val userInfoEntity = userInfoRepository.findById(uId).get()
+        val member = objectMapper.readValue<List<UserInfo>>(userInfoEntity.members).groupBy { it.id }
+
         val createMatchOderRequest = CreateMatchOderRequest(orderRequest.encryptedData,
             orderRequest.version,
             orderRequest.expireTime,
@@ -185,8 +194,18 @@ class OrderTaskManager(
             orderRequest.matchId,
             regions,
             orderRequest.users.map {
+                val userInfo = member[it.id]!!.first()
                 User.defaultUser(
-                    it.id, it.uid, it.timestamp, it.signature, it.realName, it.realCardId2, it.phone2
+                    it.id,
+                    it.uid,
+                    it.timestamp,
+                    it.signature,
+                    it.realName,
+                    it.realCardId2,
+                    it.phone2,
+                    userInfo.real_card_id,
+                    userInfo.phone,
+                    "${userInfo.realname} ${userInfo.real_card_id}"
                 )
             })
         val createOrderParam = CreateOrderParam(createOrderQueryParam, createMatchOderRequest)

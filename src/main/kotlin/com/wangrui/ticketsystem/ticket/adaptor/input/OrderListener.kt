@@ -36,24 +36,21 @@ class OrderListener(val orderUseCase: OrderUseCase,
                     @Value("\${autoCreateOrderWhenStartUp:false}") val autoCreateOrderWhenStartUp: Boolean,
                     @Value("\${jsonFilePath:E:\\抢票\\spider_img}") val jsonFilePath: String) {
     private val logger = slf4k()
-    private val srcPath = Paths.get(jsonFilePath) // 源文件夹路径
-    private val INDEX_FILE = "index.json"
-    private val REQUEST_FILE = "request.json"
-    private val AUTH_FILE = "auth.json"
     private val scope = CoroutineScope(Dispatchers.Default)
     private val clientToken = "MUX9cBF8"
 
     private val jobMapping = mutableMapOf<String, Job>()
-
+    private val matchId = matchUseCase.queryLatest().matchId
     fun cancelOrderJob(jobId: String) {
-        logger.warn("主要，马上取消任务 $jobId!!!")
+        logger.warn("注意，马上取消任务 $jobId!!!")
         jobMapping[jobId]?.cancel()
+        jobMapping.remove(jobId)
     }
 
     fun loopOrderRequest() {
         scope.launch {
             while (true) {
-                createOrders()
+                sendOrders()
                 TimeUnit.SECONDS.sleep(1)
             }
         }
@@ -103,10 +100,10 @@ class OrderListener(val orderUseCase: OrderUseCase,
         return jobMapping.keys.toList()
     }
 
-    fun createOrders() {
-        val matchId = matchUseCase.queryLatest().matchId
+    fun sendOrders() {
         val orderRequests = orderUseCase.getAutoBuyInfo()
         if (orderRequests.isEmpty()) {
+            logger.warn("现在还没有订单~~~~~~~~~~~~~~~~~~~~~~~~~")
             return
         }
 
@@ -116,6 +113,7 @@ class OrderListener(val orderUseCase: OrderUseCase,
                     logger.info("创建任务，任务id ${orderRequest.orderId}，当前时间 ${LocalDate.now()}")
                     val createOrderJob = orderTaskUseCase.createOrderJob(orderRequest.orderId, orderRequest)
                     jobMapping[orderRequest.orderId] = createOrderJob
+
                 }
 
                 if (OrderStatus.FAILURE.status != orderRequest.orderStatus) {

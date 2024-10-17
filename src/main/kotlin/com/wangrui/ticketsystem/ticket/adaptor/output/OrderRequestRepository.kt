@@ -21,8 +21,7 @@ import java.time.LocalDateTime
 interface OrderRequestRepository : JpaRepository<OrderRequestEntity, String>, OrderRequestDao {
 
     override fun getAutoBuyInfo(): List<OrderTaskUseCase.OrderRequest> {
-        return findAll()
-            .map {
+        return findAll().map {
                 val root = OrderPayloadRoot.convertJson2Object(it.orderPayload)
 
                 OrderTaskUseCase.OrderRequest(
@@ -46,24 +45,28 @@ interface OrderRequestRepository : JpaRepository<OrderRequestEntity, String>, Or
                     it.token,
                     root.id,
                     it.tokenId,
-                    it.orderStatus
+                    it.orderStatus,
+                    root.users[0].uid
                 )
             }
+    }
+
+    override fun deleteByOrderId(orderId: String) {
+        deleteById(orderId)
     }
 }
 
 @Table(name = "rs_order_request")
 @Entity
-class OrderRequestEntity(
-    @Id val id: String,
-    val matchId: String,
-    @Column(columnDefinition = "TEXT") val orderPayload: String,
-    val loginCode: String,
-    @Column(columnDefinition = "TEXT") val token: String,
-    val time: LocalDateTime,
-    val tokenId: String,
-    var orderStatus: Int
-) {
+class OrderRequestEntity(@Id val id: String,
+                         val matchId: String,
+                         @Column(columnDefinition = "TEXT") val orderPayload: String,
+                         val loginCode: String,
+                         @Column(columnDefinition = "TEXT") val token: String,
+                         val time: LocalDateTime,
+                         val tokenId: String,
+                         var orderStatus: Int,
+                         var uid: Int = 0) {
 
     fun toOrderStatus(): OrderStatus {
 
@@ -76,9 +79,7 @@ class OrderRequestEntity(
 }
 
 enum class OrderStatus(val status: Int) {
-    ONGOING(0),
-    GOT_IT(1),
-    FAILURE(2),
+    ONGOING(0), GOT_IT(1), FAILURE(2),
 }
 
 

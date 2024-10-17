@@ -7,6 +7,7 @@ import com.wangrui.ticketsystem.ticket.adaptor.output.OrderRequestEntity
 import com.wangrui.ticketsystem.ticket.adaptor.output.OrderStatus
 import com.wangrui.ticketsystem.ticket.adaptor.output.UserInfoEntity
 import com.wangrui.ticketsystem.ticket.adaptor.output.UserInfoRepository
+import com.wangrui.ticketsystem.ticket.application.port.input.MatchUseCase
 import com.wangrui.ticketsystem.ticket.application.port.input.OrderUseCase
 import com.wangrui.ticketsystem.ticket.domain.UserInfo
 import org.springframework.web.bind.annotation.*
@@ -18,7 +19,8 @@ import java.time.LocalDateTime
 class OrderController(val orderUseCase: OrderUseCase,
                       val userInfoRepository: UserInfoRepository,
                       val autoTaskEndpoint: AutoTaskEndpoint,
-                      val orderListener: OrderListener) {
+                      val orderListener: OrderListener,
+                      val matchUseCase: MatchUseCase) {
 
     private val logger = slf4k()
 
@@ -68,9 +70,65 @@ class OrderController(val orderUseCase: OrderUseCase,
         return userInfoRequest.userId
     }
 
+    @PostMapping("/bindUserInfo")
+    fun bindUserInfo(@RequestBody userBindInfoRequest: UserBindInfoRequest): String {
+        val userInfoEntityOptional = userInfoRepository.findById(userBindInfoRequest.userId)
+        if (userInfoEntityOptional.isPresent) {
+            val userInfoEntity = userInfoEntityOptional.get()
+            userInfoRepository.save(
+                UserInfoEntity(
+                    userInfoEntity.userId,
+                    userInfoEntity.loginCode,
+                    userInfoEntity.token,
+                    userInfoEntity.members,
+                    userBindInfoRequest.users,
+                    userBindInfoRequest.iv,
+                    userBindInfoRequest.encryptKey,
+                    userBindInfoRequest.version,
+                    userBindInfoRequest.expireTime,
+                    userBindInfoRequest.regions,
+
+                    )
+            )
+        } else {
+            throw IllegalArgumentException("没有找到用户id为 ${userBindInfoRequest.userId} 的用户，请先录入用户基础信息")
+        }
+
+        return userBindInfoRequest.userId
+    }
+
+    @PostMapping("/createOrders")
+    fun createOrders(@RequestBody orderIds: List<String>): List<String> {
+        return autoTaskEndpoint.createOrder(orderIds)
+    }
+
+    @PostMapping("/deleteOrders")
+    fun deleteOrders(@RequestBody orderIds: List<String>) {
+        orderIds.forEach {
+            orderUseCase.deleteOrderById(it)
+            orderListener.cancelOrderJob(it)
+        }
+
+    }
+
+    @GetMapping("/getUserCandidateOrders")
+    fun getUserCandidateOrders(): Map<String, List<OrderInfoResult>> {
+        return autoTaskEndpoint.getUserCandidateOrders()
+    }
+
+    @GetMapping("/getUserOrders")
+    fun getUserOrders(): Map<String, List<OrderInfoResult>> {
+        val matchId = matchUseCase.queryLatest().matchId
+        val orderRequests = orderUseCase.getAutoBuyInfo()
+        return orderRequests.filter { it.matchId == matchId }
+            .map { OrderInfoResult(it.orderId, it.orderId.split("|").first().toInt(), "") }
+            .groupBy { it.orderId.split("|").first() }
+    }
+
     @GetMapping("/getJobs")
     fun getJobs(): List<String> {
         return orderListener.getJobs()
+//        return listOf("xxx1|aaa|aaa","xxx2|aaa|aaa","xxx3|aaa|aaa")
     }
 
 
@@ -87,5 +145,22 @@ class OrderController(val orderUseCase: OrderUseCase,
         val loginCode: String,
         val token: String,
     )
+
+    data class UserBindInfoRequest(
+        val userId: String,
+        val users: String = "",
+        val iv: String = "",
+        val encryptKey: String = "",
+        val version: Int = 0,
+        val expireTime: Long = 0,
+        val regions: String = "",
+    )
+
+    data class OrderInfoResult(
+        val orderId: String,
+        val userId: Int,
+        val realName: String
+    )
+
 
 }

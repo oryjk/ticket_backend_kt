@@ -66,7 +66,7 @@ class AutoTaskManager(val requestParamService: RequestParamService,
     /**
      * 自动创建订单
      */
-    fun createOrder(orderId: String, loginCode: String, token: String, orderPayloadRoot: OrderPayloadRoot) {
+    fun createOrder(orderId: String, loginCode: String, token: String, orderPayloadRoot: OrderPayloadRoot): String {
         val payLoad = OrderPayloadRoot.convertObject2Json(orderPayloadRoot)
         orderUseCase.save(
             OrderRequestEntity(
@@ -77,15 +77,18 @@ class AutoTaskManager(val requestParamService: RequestParamService,
                 token,
                 LocalDateTime.now(),
                 clientToken,
-                OrderStatus.ONGOING.status
+                OrderStatus.ONGOING.status,
+                orderPayloadRoot.users[0].uid
             )
         )
+
+        return orderId
     }
 
     fun loopOrderRequest() {
         scope.launch {
             while (true) {
-                orderListener.createOrders()
+                orderListener.sendOrders()
                 delay(1000L)
             }
         }
