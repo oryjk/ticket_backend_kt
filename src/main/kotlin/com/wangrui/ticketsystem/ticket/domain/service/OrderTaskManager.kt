@@ -48,7 +48,7 @@ class OrderTaskManager(ticketDao: TicketDao,
 
         return scope.launch {
             var count = 0//用于计数通知的，假如=10，那么就会在控制台通知一下，确保任务是活着的
-            while (true) {
+            while (isActive) {
                 try {
                     count++
                     val result = sendOrder(orderRequest)
@@ -64,6 +64,7 @@ class OrderTaskManager(ticketDao: TicketDao,
                 }
 //                yield()
             }
+            logger.warn("任务取消即将退出 ${jobId}")
         }
 
     }

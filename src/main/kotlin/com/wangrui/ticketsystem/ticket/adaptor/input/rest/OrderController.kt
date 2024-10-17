@@ -10,6 +10,9 @@ import com.wangrui.ticketsystem.ticket.adaptor.output.UserInfoRepository
 import com.wangrui.ticketsystem.ticket.application.port.input.MatchUseCase
 import com.wangrui.ticketsystem.ticket.application.port.input.OrderUseCase
 import com.wangrui.ticketsystem.ticket.domain.UserInfo
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.springframework.web.bind.annotation.*
 import java.time.LocalDateTime
 
@@ -103,12 +106,16 @@ class OrderController(val orderUseCase: OrderUseCase,
     }
 
     @PostMapping("/deleteOrders")
-    fun deleteOrders(@RequestBody orderIds: List<String>) {
-        orderIds.forEach {
-            orderUseCase.deleteOrderById(it)
-            orderListener.cancelOrderJob(it)
+    fun deleteOrders(@RequestBody orderIds: List<String>):List<String> {
+        runBlocking {
+            orderIds.forEach {
+                launch {
+                    orderUseCase.deleteOrderById(it)
+                    orderListener.cancelOrderJob(it)
+                }
+            }
         }
-
+        return getJobs()
     }
 
     @GetMapping("/getUserCandidateOrders")
@@ -127,7 +134,7 @@ class OrderController(val orderUseCase: OrderUseCase,
 
     @GetMapping("/getJobs")
     fun getJobs(): List<String> {
-        return orderListener.getJobs()
+        return orderListener.getJobs().keys.toList()
 //        return listOf("xxx1|aaa|aaa","xxx2|aaa|aaa","xxx3|aaa|aaa")
     }
 

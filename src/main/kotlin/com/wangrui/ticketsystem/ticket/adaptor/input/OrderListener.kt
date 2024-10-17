@@ -8,10 +8,7 @@ import com.wangrui.ticketsystem.ticket.application.port.input.OrderTaskUseCase
 import com.wangrui.ticketsystem.ticket.application.port.input.OrderUseCase
 import com.wangrui.ticketsystem.ticket.application.port.output.UserDao
 import com.wangrui.ticketsystem.ticket.application.port.output.UserDao.Companion.autoUserInfoKey
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonArray
@@ -41,9 +38,9 @@ class OrderListener(val orderUseCase: OrderUseCase,
 
     private val jobMapping = mutableMapOf<String, Job>()
     private val matchId = matchUseCase.queryLatest().matchId
-    fun cancelOrderJob(jobId: String) {
+    suspend fun cancelOrderJob(jobId: String) {
         logger.warn("注意，马上取消任务 $jobId!!!")
-        jobMapping[jobId]?.cancel()
+        jobMapping[jobId]?.cancelAndJoin()
         jobMapping.remove(jobId)
     }
 
@@ -96,8 +93,8 @@ class OrderListener(val orderUseCase: OrderUseCase,
         return orderId
     }
 
-    fun getJobs(): List<String> {
-        return jobMapping.keys.toList()
+    fun getJobs(): Map<String, Job> {
+        return jobMapping
     }
 
     fun sendOrders() {
