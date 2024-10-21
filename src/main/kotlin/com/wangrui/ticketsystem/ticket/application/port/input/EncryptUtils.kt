@@ -58,29 +58,29 @@ object EncryptUtils {
      *
      */
     fun encrypt(params: EncryptionParams, data: String): String {
-        val a = base64ToByteArray(params.encryptKey)
-        val u = toByteArray(encodeIVtoBytes(params.iv))
-        val l = stringToUtf8ByteArray(data)
-        val secretKey = SecretKeySpec(a, "AES")
-        val ivSpec = IvParameterSpec(u)
+        val encryptKeyBase64 = encryptKeyToBase64(params.encryptKey)
+        val ivToByteArray = params.iv.encodeToByteArray()
+        val dataToByteArray = data.encodeToByteArray()
+        val secretKey = SecretKeySpec(encryptKeyBase64, "AES")
+        val ivSpec = IvParameterSpec(ivToByteArray)
         val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
         cipher.init(Cipher.ENCRYPT_MODE, secretKey, ivSpec)
-        val encryptedBytes = cipher.doFinal(l)
+        val encryptedBytes = cipher.doFinal(dataToByteArray)
         val result = encryptedBytes.toHex()
         return result
     }
 
-    private fun base64ToByteArray(base64: String): ByteArray {
+    private fun encryptKeyToBase64(encryptKey: String): ByteArray {
         // 过滤掉非Base64字符
-        val cleanedBase64 = base64.replace(Regex("[^A-Za-z0-9+/]"), "")
-        val length = cleanedBase64.length
+        val cleanedEncryptKey = encryptKey.replace(Regex("[^A-Za-z0-9+/]"), "")
+        val length = cleanedEncryptKey.length
 
         // 计算目标字节数组的长度
         val requiredLength = (3 * length + 1) / 4
 
         // Base64解码
         val base64Decoder = Base64.getDecoder()
-        val decodedBytes = base64Decoder.decode(cleanedBase64)
+        val decodedBytes = base64Decoder.decode(cleanedEncryptKey)
 
         // 准备输出数组并复制解码后的字节
         val result = ByteArray(requiredLength)
@@ -89,27 +89,11 @@ object EncryptUtils {
         return result
     }
 
-    private fun encodeIVtoBytes(iv: String): ByteArray {
-        val encodedURI = java.net.URLEncoder.encode(iv, "UTF-8")
-        val byteArrayOutput = mutableListOf<Byte>()
-
-        var i = 0
-        while (i < encodedURI.length) {
-            val char = encodedURI[i]
-            if (char == '%') {
-                val hexValue = encodedURI.substring(i + 1, i + 3).toInt(16).toByte()
-                byteArrayOutput.add(hexValue)
-                i += 3
-            } else {
-                byteArrayOutput.add(char.code.toByte())
-                i++
-            }
-        }
-
-        return byteArrayOutput.toByteArray()
+    fun encodeIVtoBytes(iv: String): ByteArray {
+        return iv.toByteArray(Charsets.UTF_8)
     }
 
-    private fun toByteArray(input: Any, isCopy: Boolean = false): ByteArray {
+    fun toByteArray(input: Any, isCopy: Boolean = false): ByteArray {
         return when (input) {
             is ByteArray -> if (isCopy) input.copyOf() else input
             is Array<*> -> {
@@ -132,42 +116,8 @@ object EncryptUtils {
         }
     }
 
-    private fun stringToUtf8ByteArray(input: String): ByteArray {
-        val byteArray = mutableListOf<Byte>()
-
-        for (char in input) {
-            val codePoint = char.code
-            when {
-                codePoint < 0x80 -> {
-                    byteArray.add(codePoint.toByte())
-                }
-
-                codePoint < 0x800 -> {
-                    byteArray.add((0xC0 or (codePoint shr 6)).toByte())
-                    byteArray.add((0x80 or (codePoint and 0x3F)).toByte())
-                }
-
-                codePoint < 0xD800 || codePoint >= 0xE000 -> {
-                    byteArray.add((0xE0 or (codePoint shr 12)).toByte())
-                    byteArray.add((0x80 or ((codePoint shr 6) and 0x3F)).toByte())
-                    byteArray.add((0x80 or (codePoint and 0x3F)).toByte())
-                }
-
-                else -> {
-                    // Handle surrogate pairs
-                    val highSurrogate = codePoint
-                    val lowSurrogate = input[input.indexOf(char) + 1].code
-                    val combinedCodePoint = 0x10000 + ((highSurrogate and 0x3FF) shl 10) or (lowSurrogate and 0x3FF)
-
-                    byteArray.add((0xF0 or (combinedCodePoint shr 18)).toByte())
-                    byteArray.add((0x80 or ((combinedCodePoint shr 12) and 0x3F)).toByte())
-                    byteArray.add((0x80 or ((combinedCodePoint shr 6) and 0x3F)).toByte())
-                    byteArray.add((0x80 or (combinedCodePoint and 0x3F)).toByte())
-                }
-            }
-        }
-
-        return byteArray.toByteArray()
+    fun stringToUtf8ByteArray(input: String): ByteArray {
+        return input.encodeToByteArray()
     }
 
     private fun padPkcs7(input: ByteArray, blockSize: Int = 16): ByteArray {
